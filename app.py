@@ -1,8 +1,13 @@
+# app.py
 import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+
+# Seaborn plots (extra "nice" visuals)
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Regression Analysis App", layout="wide")
 
@@ -42,15 +47,15 @@ def predict(X: np.ndarray, w: np.ndarray, b: float) -> np.ndarray:
     w: (d,) or (d, 1)
     returns: (n,)
     """
-    w = w.reshape(-1)  # ensure (d,)
+    w = np.asarray(w).reshape(-1)  # ensure (d,)
     return X @ w + b
 
 def mse_loss(y: np.ndarray, y_pred: np.ndarray) -> float:
     """
     MSE = (1/n) Σ (y - ŷ)^2
     """
-    y = y.reshape(-1)
-    y_pred = y_pred.reshape(-1)
+    y = np.asarray(y).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
     return float(np.mean((y - y_pred) ** 2))
 
 def compute_gradients(X: np.ndarray, y: np.ndarray, y_pred: np.ndarray):
@@ -60,13 +65,12 @@ def compute_gradients(X: np.ndarray, y: np.ndarray, y_pred: np.ndarray):
       ∂L/∂b = -(2/n) Σ (y - ŷ)
     """
     n = X.shape[0]
-    y = y.reshape(-1)
-    y_pred = y_pred.reshape(-1)
+    y = np.asarray(y).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
 
-    error = (y - y_pred)  # (n,)
-    dw = -(2.0 / n) * (X.T @ error)  # (d,)
-    db = -(2.0 / n) * np.sum(error)  # scalar
-
+    error = (y - y_pred)           # (n,)
+    dw = -(2.0 / n) * (X.T @ error) # (d,)
+    db = -(2.0 / n) * np.sum(error) # scalar
     return dw.reshape(-1), float(db)
 
 def gradient_descent_train(X: np.ndarray, y: np.ndarray, lr: float, iters: int):
@@ -74,11 +78,11 @@ def gradient_descent_train(X: np.ndarray, y: np.ndarray, lr: float, iters: int):
     Train linear regression with gradient descent.
     X should already be standardized if you want fast/steady convergence.
     """
-    n, d = X.shape
+    _, d = X.shape
     rng = np.random.default_rng(0)
 
     # Initialize weights and bias
-    w = rng.normal(0, 0.01, size=d)  # small random init
+    w = rng.normal(0, 0.01, size=d)
     b = 0.0
     losses = []
 
@@ -99,8 +103,8 @@ def gradient_descent_train(X: np.ndarray, y: np.ndarray, lr: float, iters: int):
 # Task 3: Metrics
 # =========================
 def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
-    y_true = y_true.reshape(-1)
-    y_pred = y_pred.reshape(-1)
+    y_true = np.asarray(y_true).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
 
     mse = float(np.mean((y_true - y_pred) ** 2))
     rmse = float(np.sqrt(mse))
@@ -111,6 +115,105 @@ def compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
     r2 = float(1.0 - (ss_res / ss_tot)) if ss_tot != 0 else 0.0
 
     return {"mse": mse, "rmse": rmse, "mae": mae, "r2": r2}
+
+# =========================
+# Seaborn Plot Helpers
+# =========================
+def seaborn_loss_plot(losses):
+    fig, ax = plt.subplots(figsize=(8, 3.8))
+    sns.lineplot(x=np.arange(len(losses)), y=np.array(losses), ax=ax)
+    ax.set_title("Training Progress (Seaborn): Loss vs Iteration")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel("Loss (MSE)")
+    ax.grid(True, alpha=0.2)
+    return fig
+
+def seaborn_actual_vs_pred(y_true, y_pred):
+    fig, ax = plt.subplots(figsize=(6.8, 4.2))
+    sns.regplot(x=y_true, y=y_pred, ax=ax, scatter_kws={"alpha": 0.6})
+    ax.set_title("Actual vs Predicted (Seaborn)")
+    ax.set_xlabel("Actual")
+    ax.set_ylabel("Predicted")
+    ax.grid(True, alpha=0.2)
+    return fig
+
+def seaborn_residuals_plot(y_true, y_pred):
+    residuals = y_true - y_pred
+    fig, ax = plt.subplots(figsize=(6.8, 4.2))
+    sns.scatterplot(x=y_pred, y=residuals, ax=ax, alpha=0.6)
+    ax.axhline(0, linestyle="--")
+    ax.set_title("Residuals vs Predicted (Seaborn)")
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Residual (y - ŷ)")
+    ax.grid(True, alpha=0.2)
+    return fig
+
+def seaborn_residual_hist(residuals):
+    fig, ax = plt.subplots(figsize=(6.8, 4.2))
+    sns.histplot(residuals, kde=True, ax=ax)
+    ax.set_title("Residual Distribution (Seaborn)")
+    ax.set_xlabel("Residual (y - ŷ)")
+    ax.grid(True, alpha=0.2)
+    return fig
+
+# =========================
+# Report generator
+# =========================
+def build_report_text(seed, n_samples, noise, test_split, lr, iters, metrics_train=None, metrics_test=None):
+    def fmt(m, key):
+        return "N/A" if m is None else f"{m[key]:.4f}"
+
+    report = f"""
+# Regression Analysis Brief Report (1–2 pages)
+
+## Objective
+This application implements **linear regression from scratch** using **gradient descent** and evaluates performance using standard regression metrics. The goal is to demonstrate the workflow: data generation, training, evaluation, and visualization.
+
+## Data Generation
+A synthetic linear dataset was generated with:
+- **Samples (n):** {n_samples}
+- **Noise (σ):** {noise}
+- **Seed:** {seed}
+
+True function (sanity check): **y ≈ 2.0x + 1.0** (before noise).
+
+## Model and Training
+Model form: **ŷ = Xw + b**
+
+Loss: **MSE = (1/n) Σ (y − ŷ)²**
+
+Gradients:
+- **dw = -(2/n) Xᵀ(y − ŷ)**
+- **db = -(2/n) Σ(y − ŷ)**
+
+Settings:
+- **Train/Test Split:** {test_split:.2f}
+- **Learning rate (α):** {lr}
+- **Iterations:** {iters}
+- **Feature scaling:** X was standardized using train mean/std.
+
+## Results
+### Training Metrics
+- **MSE:** {fmt(metrics_train, 'mse')}
+- **RMSE:** {fmt(metrics_train, 'rmse')}
+- **MAE:** {fmt(metrics_train, 'mae')}
+- **R²:** {fmt(metrics_train, 'r2')}
+
+### Test Metrics
+- **MSE:** {fmt(metrics_test, 'mse')}
+- **RMSE:** {fmt(metrics_test, 'rmse')}
+- **MAE:** {fmt(metrics_test, 'mae')}
+- **R²:** {fmt(metrics_test, 'r2')}
+
+## Visual Checks
+1. **Loss curve** should decrease if gradient descent converges.
+2. **Actual vs Predicted** should align close to the diagonal for good fit.
+3. **Residual plot** should show random scatter around zero.
+
+## Conclusion
+The model successfully trains via gradient descent and produces measurable predictive performance. Lower noise and appropriate hyperparameters generally improve accuracy and produce cleaner residual patterns.
+""".strip()
+    return report
 
 # =========================
 # UI
@@ -128,7 +231,7 @@ with st.sidebar:
     lr = st.number_input("Learning rate (α)", 0.0001, 1.0, 0.05, 0.01, format="%.4f")
     iters = st.slider("Iterations", 50, 5000, 800, 50)
 
-tabs = st.tabs(["Data", "Train", "Visualize", "Report Checklist"])
+tabs = st.tabs(["Data", "Train", "Visualize", "Report", "Checklist ✅"])
 
 # ---- Data tab
 with tabs[0]:
@@ -159,16 +262,14 @@ with tabs[1]:
     X_train, y_train = X[train_idx], y[train_idx]
     X_test, y_test = X[test_idx], y[test_idx]
 
-    # Feature scaling hint (recommended in activity)
+    # Standardize
     X_train_s, mean, std = standardize_fit_transform(X_train)
     X_test_s = standardize_transform(X_test, mean, std)
 
     if st.button("🚀 Train with Gradient Descent"):
         with st.spinner("Training..."):
-            # Train from scratch on standardized X
             w, b, losses = gradient_descent_train(X_train_s, y_train, float(lr), int(iters))
 
-            # Predict
             y_train_pred = predict(X_train_s, w, b)
             y_test_pred = predict(X_test_s, w, b)
 
@@ -182,8 +283,16 @@ with tabs[1]:
                 "y_test": y_test, "y_test_pred": y_test_pred
             }
             st.session_state["metrics"] = {"train": metrics_train, "test": metrics_test}
+            st.session_state["train_params"] = {
+                "seed": int(seed),
+                "n_samples": int(n_samples),
+                "noise": float(noise),
+                "test_split": float(test_split),
+                "lr": float(lr),
+                "iters": int(iters)
+            }
 
-        st.success("Done! Go to Visualize.")
+        st.success("✅ Done! Go to Visualize / Report / Checklist.")
 
 # ---- Visualize tab
 with tabs[2]:
@@ -202,34 +311,114 @@ with tabs[2]:
         c3.metric("Test MAE", f"{metrics['test']['mae']:.3f}")
         c4.metric("Test R²", f"{metrics['test']['r2']:.3f}")
 
-        # Training progress plot (Loss vs Iteration)
+        st.markdown("### Plotly Charts")
         loss_fig = go.Figure()
-        loss_fig.add_trace(go.Scatter(x=list(range(1, len(losses) + 1)), y=losses, mode="lines", name="MSE"))
-        loss_fig.update_layout(title="Training Progress: Loss vs Iteration", xaxis_title="Iteration", yaxis_title="MSE")
+        loss_fig.add_trace(go.Scatter(
+            x=list(range(1, len(losses) + 1)),
+            y=losses,
+            mode="lines",
+            name="MSE"
+        ))
+        loss_fig.update_layout(
+            title="Training Progress: Loss vs Iteration",
+            xaxis_title="Iteration",
+            yaxis_title="MSE"
+        )
         st.plotly_chart(loss_fig, use_container_width=True)
 
-        # Predictions plot: Actual vs Predicted (test)
         y_test = preds["y_test"]
         y_test_pred = preds["y_test_pred"]
-        pv_fig = px.scatter(x=y_test, y=y_test_pred, labels={"x": "Actual", "y": "Predicted"},
-                            title="Predictions: Actual vs Predicted (Test Set)")
+        pv_fig = px.scatter(
+            x=y_test,
+            y=y_test_pred,
+            labels={"x": "Actual", "y": "Predicted"},
+            title="Predictions: Actual vs Predicted (Test Set)"
+        )
         st.plotly_chart(pv_fig, use_container_width=True)
 
-        # Residuals plot
         residuals = y_test - y_test_pred
-        res_fig = px.scatter(x=y_test_pred, y=residuals,
-                             labels={"x": "Predicted", "y": "Residual (y - ŷ)"},
-                             title="Residuals Plot")
+        res_fig = px.scatter(
+            x=y_test_pred,
+            y=residuals,
+            labels={"x": "Predicted", "y": "Residual (y - ŷ)"},
+            title="Residuals Plot"
+        )
         st.plotly_chart(res_fig, use_container_width=True)
 
-# ---- Report checklist tab
+        st.markdown("### Seaborn Charts (Nice Looking)")
+        colA, colB = st.columns(2)
+        with colA:
+            st.pyplot(seaborn_loss_plot(losses), clear_figure=True)
+        with colB:
+            st.pyplot(seaborn_actual_vs_pred(y_test, y_test_pred), clear_figure=True)
+
+        colC, colD = st.columns(2)
+        with colC:
+            st.pyplot(seaborn_residuals_plot(y_test, y_test_pred), clear_figure=True)
+        with colD:
+            st.pyplot(seaborn_residual_hist(residuals), clear_figure=True)
+
+# ---- Report tab
 with tabs[3]:
-    st.subheader("Submission Checklist (quick)")
-    st.write("- [ ] Data generation working")
-    st.write("- [ ] Gradient descent implemented and converges")
-    st.write("- [ ] Loss decreases over iterations")
-    st.write("- [ ] Metrics shown: MSE, RMSE, MAE, R²")
-    st.write("- [ ] Plots: loss curve, actual vs predicted, residuals")
-    st.write("- [ ] Clean UI + sidebar controls")
-    st.write("- [ ] Screenshots for submission")
-    st.write("- [ ] 1–2 page brief report")
+    st.subheader("Brief Report (1–2 pages)")
+
+    metrics_train = st.session_state.get("metrics", {}).get("train")
+    metrics_test = st.session_state.get("metrics", {}).get("test")
+
+    report_text = build_report_text(
+        seed=int(seed),
+        n_samples=int(n_samples),
+        noise=float(noise),
+        test_split=float(test_split),
+        lr=float(lr),
+        iters=int(iters),
+        metrics_train=metrics_train,
+        metrics_test=metrics_test
+    )
+
+    st.markdown(report_text)
+
+    st.download_button(
+        "📄 Download Report (TXT)",
+        data=report_text,
+        file_name="regression_report.txt",
+        mime="text/plain"
+    )
+
+# ---- Checklist tab
+with tabs[4]:
+    st.subheader("Submission Checklist ✅")
+
+    # Initialize checkbox state once
+    if "checklist" not in st.session_state:
+        st.session_state["checklist"] = {
+            "data": False,
+            "gd": False,
+            "loss": False,
+            "metrics": False,
+            "plots": False,
+            "ui": False,
+            "screens": False,
+            "report": False,
+        }
+
+    c = st.session_state["checklist"]
+
+    c["data"] = st.checkbox("✅ Data generation working", value=c["data"])
+    c["gd"] = st.checkbox("✅ Gradient descent implemented and converges", value=c["gd"])
+    c["loss"] = st.checkbox("✅ Loss decreases over iterations", value=c["loss"])
+    c["metrics"] = st.checkbox("✅ Metrics shown: MSE, RMSE, MAE, R²", value=c["metrics"])
+    c["plots"] = st.checkbox("✅ Plots: loss curve, actual vs predicted, residuals", value=c["plots"])
+    c["ui"] = st.checkbox("✅ Clean UI + sidebar controls", value=c["ui"])
+    c["screens"] = st.checkbox("✅ Screenshots for submission", value=c["screens"])
+    c["report"] = st.checkbox("✅ 1–2 page brief report", value=c["report"])
+
+    done_count = sum(bool(v) for v in c.values())
+    total = len(c)
+
+    st.divider()
+    if done_count == total:
+        st.success(f"✅ All checklist items complete! ({done_count}/{total})")
+    else:
+        st.info(f"☑️ Progress: {done_count}/{total} complete")
+
