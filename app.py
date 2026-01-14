@@ -397,4 +397,4 @@ with tabs[3]:
             st.write("- Purchases can correlate with engagement (depending on your game).")
 
         st.divider()
-        st.caption("If your professor asks: we standardized features so gradient descent behaves better.")
+        st.caption("We standardized features so gradient descent behaves better.")
