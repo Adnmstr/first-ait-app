@@ -292,7 +292,7 @@ with tabs[1]:
                 "iters": int(iters)
             }
 
-        st.success("✅ Done! Go to Visualize / Report / Checklist.")
+        st.success("Done! Go to Visualize / Report / Checklist.")
 
 # ---- Visualize tab
 with tabs[2]:
@@ -379,7 +379,7 @@ with tabs[3]:
     st.markdown(report_text)
 
     st.download_button(
-        "📄 Download Report (TXT)",
+        "Download Report (TXT)",
         data=report_text,
         file_name="regression_report.txt",
         mime="text/plain"
@@ -387,7 +387,7 @@ with tabs[3]:
 
 # ---- Checklist tab
 with tabs[4]:
-    st.subheader("Submission Checklist ✅")
+    st.subheader("Submission Checklist")
 
     # Initialize checkbox state once
     if "checklist" not in st.session_state:
@@ -404,21 +404,21 @@ with tabs[4]:
 
     c = st.session_state["checklist"]
 
-    c["data"] = st.checkbox("✅ Data generation working", value=c["data"])
-    c["gd"] = st.checkbox("✅ Gradient descent implemented and converges", value=c["gd"])
-    c["loss"] = st.checkbox("✅ Loss decreases over iterations", value=c["loss"])
-    c["metrics"] = st.checkbox("✅ Metrics shown: MSE, RMSE, MAE, R²", value=c["metrics"])
-    c["plots"] = st.checkbox("✅ Plots: loss curve, actual vs predicted, residuals", value=c["plots"])
-    c["ui"] = st.checkbox("✅ Clean UI + sidebar controls", value=c["ui"])
-    c["screens"] = st.checkbox("✅ Screenshots for submission", value=c["screens"])
-    c["report"] = st.checkbox("✅ 1–2 page brief report", value=c["report"])
+    c["data"] = st.checkbox("Data generation working", value=c["data"])
+    c["gd"] = st.checkbox("Gradient descent implemented and converges", value=c["gd"])
+    c["loss"] = st.checkbox("Loss decreases over iterations", value=c["loss"])
+    c["metrics"] = st.checkbox("Metrics shown: MSE, RMSE, MAE, R²", value=c["metrics"])
+    c["plots"] = st.checkbox("Plots: loss curve, actual vs predicted, residuals", value=c["plots"])
+    c["ui"] = st.checkbox("Clean UI + sidebar controls", value=c["ui"])
+    c["screens"] = st.checkbox("Screenshots for submission", value=c["screens"])
+    c["report"] = st.checkbox("1–2 page brief report", value=c["report"])
 
     done_count = sum(bool(v) for v in c.values())
     total = len(c)
 
     st.divider()
     if done_count == total:
-        st.success(f"✅ All checklist items complete! ({done_count}/{total})")
+        st.success(f"All checklist items complete! ({done_count}/{total})")
     else:
         st.info(f"☑️ Progress: {done_count}/{total} complete")
 
